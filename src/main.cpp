@@ -133,12 +133,12 @@ int main(int argc, char *argv[])
 	write(newsockfd, buffer, size);
 
 	// Entry descriptor
-	unsigned int id = 0, name = 8;
+	unsigned int id = 0, entryName = 8;
 	char numFields = 5;
 	char msg = 3;
 	memcpy(buffer, &msg, 1);
 	memcpy(buffer + 1, &id, 4);
-	memcpy(buffer + 5, &name, 4);
+	memcpy(buffer + 5, &entryName, 4);
 	memcpy(buffer + 9, &numFields, 1);
 
 	unsigned int name = 3;
