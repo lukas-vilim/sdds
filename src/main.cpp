@@ -129,36 +129,39 @@ int main(int argc, char *argv[])
 	write(newsockfd, buffer, size);
 	size = MakeStringMsg(buffer, 7, "Text");
 	write(newsockfd, buffer, size);
+	size = MakeStringMsg(buffer, 8, "Entry");
+	write(newsockfd, buffer, size);
 
-	// Entry descriptro
-	unsigned int id = 0;
+	// Entry descriptor
+	unsigned int id = 0, name = 8;
 	char numFields = 5;
 	char msg = 3;
 	memcpy(buffer, &msg, 1);
 	memcpy(buffer + 1, &id, 4);
-	memcpy(buffer + 5, &numFields, 1);
+	memcpy(buffer + 5, &name, 4);
+	memcpy(buffer + 9, &numFields, 1);
 
 	unsigned int name = 3;
-	buffer[6] = 1;
-	memcpy(buffer + 7, &name, 4);
+	buffer[10] = 1;
+	memcpy(buffer + 11, &name, 4);
 
 	name = 5;
-	buffer[11] = 2;
-	memcpy(buffer + 12, &name, 4);
+	buffer[15] = 2;
+	memcpy(buffer + 16, &name, 4);
 	
 	name = 4;
-	buffer[16] = 1;
-	memcpy(buffer + 17, &name, 4);
+	buffer[20] = 1;
+	memcpy(buffer + 21, &name, 4);
 
 	name = 6;
-	buffer[21] = 3;
-	memcpy(buffer + 22, &name, 4);
+	buffer[25] = 3;
+	memcpy(buffer + 26, &name, 4);
 
 	name = 7;
-	buffer[26] = 4;
-	memcpy(buffer + 27, &name, 4);
+	buffer[30] = 4;
+	memcpy(buffer + 31, &name, 4);
 
-	write(newsockfd, buffer, 32);
+	write(newsockfd, buffer, 36);
 
 	// Entries.
 	for(int i = 0; i < 20; ++i)
