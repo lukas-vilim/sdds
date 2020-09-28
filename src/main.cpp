@@ -23,12 +23,30 @@ struct Entry
 	unsigned int Text;
 };
 
-const char* TEXT_1 = "Text1";
-const char* TEXT_2 = "Text2";
-const char* TEXT_3 = "Text3";
+const char* STRING_TABLE[9] = 
+{
+	"Text1",	// = 0
+	"Text2",	// = 1
+	"Text3",	// = 2
+	"Id",			// = 3
+	"Int",		// = 4
+	"Float",	// = 5
+	"Bool",		// = 6
+	"Text",		// = 7
+	"Entry"		// = 8
+};
+
+unsigned int MakeProtoHeader(char* buffer)
+{
+	unsigned int proto = 0xFEEDBEEFu;
+	memcpy(buffer, &proto, 4);
+}
 
 unsigned int MakeStringMsg(char* buffer, unsigned id, const char* str)
 {
+	MakeProtoHeader(buffer);
+	buffer = buffer + 4;
+
 	unsigned int msg, size;
 	msg = 1;
 	size = strlen(str);
@@ -37,11 +55,14 @@ unsigned int MakeStringMsg(char* buffer, unsigned id, const char* str)
 	memcpy(buffer + 5, &size, 4);
 	memcpy(buffer + 9, str, size);
 
-	return 9 + size;
+	return 13 + size;
 }
 
 unsigned int MakeEntryMsg(char* buffer, Entry* entry)
 {
+	MakeProtoHeader(buffer);
+	buffer = buffer + 4;
+
 	unsigned int id = 0, msg = 2;
 	memcpy(buffer, &msg, 1);
 	memcpy(buffer + 1, &id, 4);
@@ -51,13 +72,7 @@ unsigned int MakeEntryMsg(char* buffer, Entry* entry)
 	memcpy(buffer + 17, &entry->Bool, 1);
 	memcpy(buffer + 18, &entry->Text, 4);
 
-	return 22;
-}
-
-unsigned int MakeProtoHeader(char* buffer)
-{
-	unsigned int proto = 0xFEEDBEEFu;
-	memcpy(buffer, &proto, 4);
+	return 26;
 }
 
 int main(int argc, char *argv[])
@@ -72,6 +87,7 @@ int main(int argc, char *argv[])
 	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0) 
 	{
+		close(sockfd);
 		error("ERROR opening socket");
 	}
 
@@ -82,6 +98,7 @@ int main(int argc, char *argv[])
 	serv_addr.sin_port = htons(portno);
 	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
 	{
+		close(sockfd);
 		error("ERROR on binding");
 	}
 
@@ -90,47 +107,27 @@ int main(int argc, char *argv[])
 	int newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 	if (newsockfd < 0) 
 	{
+		close(sockfd);
 		error("ERROR on accept");
 	}
 
 	char buffer[256];
 	bzero(buffer,256);
 
+
 	// Strings.
 	unsigned int size;
-	size = MakeStringMsg(buffer, 0, TEXT_1);
-	unsigned int n = write(newsockfd, buffer, size);
-	if(n != 8 + size)
+	for(int i = 0; i < 9; ++i)
 	{
-		error("ERROR writing to socket str1");
+		unsigned int size = MakeStringMsg(buffer, i, STRING_TABLE[i]);
+		unsigned int n = write(newsockfd, buffer, size);
+		if(n != size)
+		{
+			close(newsockfd);
+			close(sockfd);
+			error("ERROR writing string msg to socket");
+		}
 	}
-	
-	size = MakeStringMsg(buffer, 1, TEXT_2);
-	n = write(newsockfd, buffer, size);
-	if(n != 8 + size)
-	{
-		error("ERROR writing to socket str2");
-	}
-
-	size = MakeStringMsg(buffer, 2, TEXT_3);
-	n = write(newsockfd, buffer, size);
-	if(n != 8 + size)
-	{
-		error("ERROR writing to socket str3");
-	}
-
-	size = MakeStringMsg(buffer, 3, "Id");
-	write(newsockfd, buffer, size);
-	size = MakeStringMsg(buffer, 4, "Int");
-	write(newsockfd, buffer, size);
-	size = MakeStringMsg(buffer, 5, "Float");
-	write(newsockfd, buffer, size);
-	size = MakeStringMsg(buffer, 6, "Bool");
-	write(newsockfd, buffer, size);
-	size = MakeStringMsg(buffer, 7, "Text");
-	write(newsockfd, buffer, size);
-	size = MakeStringMsg(buffer, 8, "Entry");
-	write(newsockfd, buffer, size);
 
 	// Entry descriptor
 	unsigned int id = 0, entryName = 8;
@@ -166,7 +163,6 @@ int main(int argc, char *argv[])
 	// Entries.
 	for(int i = 0; i < 20; ++i)
 	{
-		MakeProtoHeader(buffer);
 		Entry e;
 		e.Id = i;
 		e.Int = 7;
@@ -174,10 +170,12 @@ int main(int argc, char *argv[])
 		e.Bool = true;
 		e.Text = i % 3;
 
-		unsigned int size = MakeEntryMsg(buffer + 4, &e);
-		n = write(newsockfd, buffer, size + 4);
-		if(n != size + 4)
+		unsigned int size = MakeEntryMsg(buffer, &e);
+		unsigned int n = write(newsockfd, buffer, size);
+		if(n != size)
 		{
+			close(newsockfd);
+			close(sockfd);
 			error("ERROR writing entries");
 		}
 	}
