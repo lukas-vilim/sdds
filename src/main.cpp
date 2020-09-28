@@ -1,12 +1,13 @@
 /* A simple server in the internet domain using TCP
 	 The port number is passed as an argument */
+#include <netinet/in.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/types.h> 
 #include <sys/socket.h>
-#include <netinet/in.h>
+#include <sys/types.h> 
+#include <unistd.h>
 
 void error(const char *msg)
 {
@@ -47,8 +48,8 @@ unsigned int MakeStringMsg(char* buffer, unsigned id, const char* str)
 	MakeProtoHeader(buffer);
 	buffer = buffer + 4;
 
-	unsigned int msg, size;
-	msg = 1;
+	unsigned int size;
+	unsigned char msg = 1;
 	size = strlen(str);
 	memcpy(buffer, &msg, 1);
 	memcpy(buffer + 1, &id, 4);
@@ -130,35 +131,50 @@ int main(int argc, char *argv[])
 	}
 
 	// Entry descriptor
-	unsigned int id = 0, entryName = 8;
-	char numFields = 5;
-	char msg = 3;
-	memcpy(buffer, &msg, 1);
-	memcpy(buffer + 1, &id, 4);
-	memcpy(buffer + 5, &entryName, 4);
-	memcpy(buffer + 9, &numFields, 1);
+	{
+		unsigned int id = 0, entryName = 8;
+		char numFields = 5;
+		char msg = 3;
+		char* buf_ptr = buffer;
 
-	unsigned int name = 3;
-	buffer[10] = 1;
-	memcpy(buffer + 11, &name, 4);
+		MakeProtoHeader(buf_ptr);
+		buf_ptr += 4;
 
-	name = 5;
-	buffer[15] = 2;
-	memcpy(buffer + 16, &name, 4);
-	
-	name = 4;
-	buffer[20] = 1;
-	memcpy(buffer + 21, &name, 4);
+		memcpy(buf_ptr, &msg, 1);
+		memcpy(buf_ptr + 1, &id, 4);
+		memcpy(buf_ptr + 5, &entryName, 4);
+		memcpy(buf_ptr + 9, &numFields, 1);
 
-	name = 6;
-	buffer[25] = 3;
-	memcpy(buffer + 26, &name, 4);
+		buf_ptr += 10;
 
-	name = 7;
-	buffer[30] = 4;
-	memcpy(buffer + 31, &name, 4);
+		unsigned int name = 3;
 
-	write(newsockfd, buffer, 36);
+		buf_ptr[0] = 1;
+		memcpy(buf_ptr + 1, &name, 4);
+		buf_ptr += 5;
+
+		name = 5;
+		buf_ptr[0] = 2;
+		memcpy(buf_ptr + 1, &name, 4);
+		buf_ptr += 5;
+
+		name = 4;
+		buf_ptr[0] = 1;
+		memcpy(buf_ptr + 1, &name, 4);
+		buf_ptr += 5;
+
+		name = 6;
+		buf_ptr[0] = 3;
+		memcpy(buf_ptr + 1, &name, 4);
+		buf_ptr += 5;
+
+		name = 7;
+		buf_ptr[0] = 4;
+		memcpy(buf_ptr + 1, &name, 4);
+		buf_ptr += 5;
+
+		write(newsockfd, buffer, uintptr_t(buf_ptr) - uintptr_t(buffer));
+	}
 
 	// Entries.
 	for(int i = 0; i < 20; ++i)
